@@ -17,9 +17,10 @@ namespace GetCert
         /// </summary>
         /// <param name="certificateName">The required name of the certificate.</param>
         /// <param name="vault">Optional vault name or URI to an Azure Key Vault.</param>
+        /// <param name="interactive">Enable interactive authentication using your browser.</param>
         /// <param name="verbose">Enable verbose output.</param>
         /// <returns>A <see cref="Task"/> to await the operation.</returns>
-        static async Task Main(string certificateName, string vault = null, bool verbose = false)
+        static async Task Main(string certificateName, string vault = null, bool interactive = false, bool verbose = false)
         {
             using IDisposable listener = verbose ? AzureEventSourceListener.CreateConsoleLogger(EventLevel.Verbose) : null;
             using CancellationTokenSource cts = new CancellationTokenSource();
@@ -35,16 +36,16 @@ namespace GetCert
                 throw new InvalidOperationException($"{vault} is not a valid Azure Key Vault URI");
             }
 
-            X509Certificate2 certificate = await GetCertificateAsync(vaultUri, certificateName, cts.Token);
+            X509Certificate2 certificate = await GetCertificateAsync(vaultUri, certificateName, interactive, cts.Token);
 
             Console.WriteLine("Subject: {0}", certificate.Subject);
             Console.WriteLine("Thumbprint: {0}", certificate.Thumbprint);
             Console.WriteLine("HasPrivateKey: {0}", certificate.HasPrivateKey);
         }
 
-        static async Task<X509Certificate2> GetCertificateAsync(Uri vaultUri, string certificateName, CancellationToken cancellationToken = default)
+        static async Task<X509Certificate2> GetCertificateAsync(Uri vaultUri, string certificateName, bool interactive, CancellationToken cancellationToken = default)
         {
-            DefaultAzureCredential credential = new DefaultAzureCredential();
+            DefaultAzureCredential credential = new DefaultAzureCredential(includeInteractiveCredentials: interactive);
             CertificateClient certificateClient = new CertificateClient(vaultUri, credential);
             SecretClient secretClient = new SecretClient(vaultUri, credential);
 
