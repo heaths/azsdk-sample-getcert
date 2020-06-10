@@ -12,7 +12,14 @@ namespace GetCert
 {
     class Program
     {
-        static async Task Main(string certificateName, bool verbose = false)
+        /// <summary>
+        /// Gets information about a certificate in Azure Key Vault.
+        /// </summary>
+        /// <param name="certificateName">The required name of the certificate.</param>
+        /// <param name="vault">Optional vault name or URI to an Azure Key Vault.</param>
+        /// <param name="verbose">Enable verbose output.</param>
+        /// <returns>A <see cref="Task"/> to await the operation.</returns>
+        static async Task Main(string certificateName, string vault = null, bool verbose = false)
         {
             using IDisposable listener = verbose ? AzureEventSourceListener.CreateConsoleLogger(EventLevel.Verbose) : null;
             using CancellationTokenSource cts = new CancellationTokenSource();
@@ -21,23 +28,33 @@ namespace GetCert
             {
                 cts.Cancel();
             };
-            
-            X509Certificate2 certificate = await GetCertificateAsync(certificateName, cts.Token);
-            
+
+            vault ??= Environment.GetEnvironmentVariable("AZURE_KEYVAULT_URL") ?? throw new InvalidOperationException("Missing --vault parameter or $AZURE_KEYVAULT_URL");
+            if (!Uri.TryCreate(vault, UriKind.Absolute, out Uri vaultUri) && !Uri.TryCreate($"https://{vault}.vault.azure.net", UriKind.Absolute, out vaultUri))
+            {
+                throw new InvalidOperationException($"{vault} is not a valid Azure Key Vault URI");
+            }
+
+            X509Certificate2 certificate = await GetCertificateAsync(vaultUri, certificateName, cts.Token);
+
             Console.WriteLine("Subject: {0}", certificate.Subject);
             Console.WriteLine("Thumbprint: {0}", certificate.Thumbprint);
             Console.WriteLine("HasPrivateKey: {0}", certificate.HasPrivateKey);
         }
 
-        static async Task<X509Certificate2> GetCertificateAsync(string certificateName, CancellationToken cancellationToken = default)
+        static async Task<X509Certificate2> GetCertificateAsync(Uri vaultUri, string certificateName, CancellationToken cancellationToken = default)
         {
-            Uri vaultUri = new Uri(Environment.GetEnvironmentVariable("AZURE_KEYVAULT_URL") ?? throw new InvalidOperationException("Missing $AZURE_KEYVAULT_URL"));
-
             DefaultAzureCredential credential = new DefaultAzureCredential();
             CertificateClient certificateClient = new CertificateClient(vaultUri, credential);
             SecretClient secretClient = new SecretClient(vaultUri, credential);
 
             KeyVaultCertificateWithPolicy certificate = await certificateClient.GetCertificateAsync(certificateName, cancellationToken);
+
+            // Return a certificate with only the public key if the private key is not exportable.
+            if (certificate.Policy?.Exportable != true)
+            {
+                return new X509Certificate2(certificate.Cer);
+            }
 
             // Parse the secret ID and version to retrieve the private key.
             string[] segments = certificate.SecretId.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
