@@ -17,12 +17,12 @@ To build and run this project, you'll need:
    * Log into Azure using the [Az PowerShell module](https://docs.microsoft.com/powershell/azure/install-az-ps?view=azps-1.2.0) (preview): `Connect-AzAccount`
    * Log into Azure using your browser: pass `--interactive` to allow opening your default browser to authenticate.
    * Create a service principal in the portal and save the following information in user environment variables:
-     Name               | Description
-     ------------------ | -----------
-     AZURE_TENANT_ID    | The tenant ID (GUID) to which the service principal belongs.
-     AZURE_CLIENT_ID    | The application ID (GUID).
-     AZURE_CLIENT_ID    | The application password/secret (GUID).
-     AZURE_KEYVAULT_URL | Optional URI of the Key Vault, e.g. `https://myvault.vault.azure.net`.
+     Name                 | Description
+     -------------------- | -----------
+     `AZURE_TENANT_ID`    | The tenant ID (GUID) to which the service principal belongs.
+     `AZURE_CLIENT_ID`    | The application ID (GUID).
+     `AZURE_CLIENT_ID`    | The application password/secret (GUID).
+     `AZURE_KEYVAULT_URL` | Optional URI of the Key Vault, e.g. `https://myvault.vault.azure.net`.
 
 Running the project as shown in the example below will restore packages, build the project, and run the executable:
 
